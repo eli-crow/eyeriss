@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title></title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+	<link rel="stylesheet" href="">
+	<style type="text/css">
+		* {
+			width: 100%;
+			margin: 0;
+			overflow: hidden;
+		}
+	</style>
+</head>
+
+
+<body>
+</body>
+
+
+<script id="patternBoilerplateTop" type="x-shader/x-fragment">
+	precision mediump float;
+
+    uniform vec2 pupilPosition;
+    uniform vec4 leftData;
+
+	//TODO: make time a vector at least with sin(time)
+    uniform float time;
+    uniform vec2 resolution;
+    uniform vec4 eyerissColors[4];
+	
+    varying vec2 vTextureCoord;
+    uniform sampler2D uSampler;
+	
+	const float PI = 3.1415926536;
+	
+	//used because glsl does not support variable array access
+	vec4 getColor(int index){
+        if (index == 0) return eyerissColors[0];
+        else if (index == 1) return eyerissColors[1];
+        else if (index == 2) return eyerissColors[2];
+        else return eyerissColors[3];
+	}
+	
+	float rand(vec2 co){
+		return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+	}
+	
+	void main(void) 
+	{	
+		vec2 diff = gl_FragCoord.xy - pupilPosition;
+		float len = length(diff);
+		float theta = atan(diff.x, diff.y);
+</script>
+
+
+<script id="fragFloral" type="x-shader/x-fragment" class="pattern-script" data-colors="florida">
+		float pupilSize = 40.0;
+		float irisSize = 50.0;
+	
+        float radialPattern = 
+			cos(
+				theta * 4.0 
+				+ len * leftData.z / 30.0
+			)
+			;
+
+        float colorValue = 
+			cos(len/50.0)  
+            + time
+            + max(leftData.w - 100.0, 0.0) / 100.0 * radialPattern;
+</script>
+    
+    
+<script id="fragShine" type="x-shader/x-fragment" class="pattern-script" data-colors="royal">
+		float pupilSize = 40.0; 
+		float irisSize = 50.0;
+			
+		float distortion = 
+			cos(diff.x * 100.0 / leftData.w ) + 4.0
+			+ cos(diff.y * 100.0 / leftData.w ) 
+			;
+
+        float colorValue = len / 50.0
+			+ max(distortion - len/100.0, 0.0)
+            + time
+			;
+</script>    
+
+	
+<script id="fragBubble" type="x-shader/x-fragment" class="pattern-script" data-colors="propaganda">
+		float pupilSize = 40.0; 
+		float irisSize = 60.0; 
+	
+		float radialPattern = 
+			cos(
+            	theta * 3.0 
+				+ pupilPosition.x / 40.0
+			);
+			
+		float distortion = 
+			cos(
+				diff.x * 20.0 / leftData.w 
+				+ pupilPosition.x / 31.0
+			)
+			;
+
+        float colorValue = 
+			len / 50.0 
+			+ distortion 
+			+ radialPattern
+            + time
+			;
+</script>
+
+
+<script id="fragSparkle" type="x-shader/x-fragment" class="pattern-script" data-colors="florida">
+		float pupilSize = 40.0; 
+		float irisSize = 50.0;
+		
+		float colorValue = 3.0;
+		float seed = rand(gl_FragCoord.xy * sin(time) * 0.1) * len/50.0;
+		if ( seed > 1.99) {
+			colorValue = 2.0;
+		} else if (seed > 0.29) {
+			colorValue = 0.0;
+		}
+</script>
+
+<!--TODO: handle sin(time) in precomputed uniform, currently O^n-->
+<script id="fragKaleidoscope" type="x-shader/x-fragment" class="pattern-script" data-colors="neon">
+		float pupilSize = 	40.0 - (sin(time)+1.0)/2.0 * 20.0; 
+		float irisSize = 	50.0 + (sin(time)+1.0)/2.0 * 20.0;
+	
+		//override theta to repeat the first 60 degrees
+		float rotSymmetry = ceil(leftData.w / 100.0 - 1.0)/2.0;
+		theta = mod(theta, PI/rotSymmetry) - PI/rotSymmetry/2.0 + leftData.z;
+	
+		//function for straight line
+		float colorValue = cos(theta) * len/40.0;
+</script>
+  
+  
+<script id="patternBoilerplateBottom" type="x-shader/x-fragment">
+		// get color index as int modulo 4
+	    highp int colIdx = int(mod(colorValue, 4.0));
+	
+		//set pupil size
+		if (len < irisSize ) colIdx = 0; 
+		if (len < pupilSize ) colIdx = 3;
+	
+	    float a = texture2D(uSampler, vTextureCoord).a;
+        gl_FragColor = vec4(getColor(colIdx).rgb * a, a);
+    }
+</script>
+   
+   
+<!--couldn't think of a simpler way to load images through pixi.js while offline--> 
+<script id="eyeMask" type="base64Image">
+    data:image/png;base64,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
+</script>
+	
+<script src="js/pixi.min.js"></script>
+<script src="js/leap-0.6.4.min.js"></script>
+<script src="js/eyeriss.js"></script>
+</html>
